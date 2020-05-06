@@ -18,9 +18,12 @@ import org.geotools.filter.text.cql2.CQL;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.geometry.DirectPosition3D;
 import org.geotools.geometry.Envelope2D;
+import org.geotools.geometry.GeometryBuilder;
+import org.geotools.geometry.iso.text.WKTParser;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
+import org.locationtech.jts.awt.PointShapeFactory;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.math.Vector3D;
 import org.locationtech.jts.operation.distance.DistanceOp;
@@ -87,16 +90,16 @@ public class Main {
             }
 
 
-            GeometryFactory geometryFactory = new GeometryFactory();
+
             // TODO: Get bridge width
-            double BRIDGE_WIDTH = 1000;
+            double BRIDGE_WIDTH = 10;
 
             ArrayList<Vector3D> bridgePoints = new ArrayList<>();
             for (Vector3D vector3D : points) {
                 /*if (vector3D.getZ() > minBridgeZ && vector3D.getZ() < maxBridgeZ) {
                     bridgePoints.add(vector3D);
                 }*/
-                Point point = geometryFactory.createPoint(new CoordinateXY(vector3D.getX(), vector3D.getY()));
+                Point point = new GeometryFactory().createPoint(new Coordinate(vector3D.getX() * lasHeader.getXScaleFactor(), vector3D.getY() * lasHeader.getYScaleFactor()));
 
                 MathTransform transform = CRS.findMathTransform(SHP_CS, LAZ_CS, false);
                 MultiLineString targetBridge = (MultiLineString) JTS.transform(bridge.getBridge(), transform);
@@ -111,9 +114,11 @@ public class Main {
                 double distance = gc.getOrthodromicDistance();
                 */
                 Coordinate coordinate1 = DistanceOp.closestPoints(targetBridge, point)[0];
+                //System.out.println("coordinate1 = " + coordinate1.toString());
                 Coordinate coordinate2 = point.getCoordinate();
+                //System.out.println("coordinate2 = " + coordinate2.toString());
 
-                System.out.println("distance = " + coordinate1.distance(coordinate2));
+                //System.out.println("distance = " + coordinate1.distance(coordinate2));
                 double distance = coordinate1.distance(coordinate2);
 
                 if(distance < BRIDGE_WIDTH) {
@@ -124,11 +129,12 @@ public class Main {
                 }
             }
 
-            /*ArrayList<Vector3D> generatedPoints = new ArrayList<>();
+            ArrayList<Vector3D> generatedPoints = new ArrayList<>();
             for(Vector3D bridgePoint : bridgePoints) {
                 generatedPoints.add(new Vector3D(bridgePoint.getX(), bridgePoint.getY(), interpolateZ(bridgePoint)));
             }
-            points.addAll(generatedPoints);*/
+            points.addAll(generatedPoints);
+            System.out.println("points = " + points.size());
             System.out.println("bridge points = " + bridgePoints.size());
             points.removeAll(bridgePoints);
 
