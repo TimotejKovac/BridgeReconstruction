@@ -15,16 +15,14 @@ import org.geotools.data.FeatureSource;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.text.cql2.CQL;
-import org.geotools.geometry.DirectPosition2D;
-import org.geotools.geometry.DirectPosition3D;
 import org.geotools.geometry.Envelope2D;
-import org.geotools.geometry.GeometryBuilder;
-import org.geotools.geometry.iso.text.WKTParser;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
-import org.locationtech.jts.awt.PointShapeFactory;
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.math.Vector3D;
 import org.locationtech.jts.operation.distance.DistanceOp;
 import org.opengis.feature.Feature;
@@ -37,10 +35,7 @@ import org.opengis.referencing.operation.TransformException;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Main {
 
@@ -76,8 +71,13 @@ public class Main {
 
         ArrayList<Bridge> bridges = readShapeFile(new File("../GJI_SLO_SHP_G_1100/GJI_SLO_1100_ILL_20200402.shp"), bounds);
 
+        System.out.println("bridges = " + bridges.size());
 
-        // TODO: Merge overlapping bridges
+        while(!mergeBridges(bridges)) {
+            System.out.println("Repeat...");
+        }
+        System.out.println("bridges = " + bridges.size());
+
         int i = 0;
         for (Bridge bridge : bridges) {
             BoundingBox bridgeBounds = bridge.getSkirt();
@@ -90,9 +90,8 @@ public class Main {
             }
 
 
-
-            // TODO: Get bridge width
-            double BRIDGE_WIDTH = 10;
+            // TODO: Get bridge width. Maybe even use meters.
+            double BRIDGE_WIDTH = 12;
 
             ArrayList<Vector3D> bridgePoints = new ArrayList<>();
             for (Vector3D vector3D : points) {
@@ -102,26 +101,32 @@ public class Main {
                 Point point = new GeometryFactory().createPoint(new Coordinate(vector3D.getX() * lasHeader.getXScaleFactor(), vector3D.getY() * lasHeader.getYScaleFactor()));
 
                 MathTransform transform = CRS.findMathTransform(SHP_CS, LAZ_CS, false);
-                MultiLineString targetBridge = (MultiLineString) JTS.transform(bridge.getBridge(), transform);
 
+                boolean isTypeBridge = false;
+                for(MultiLineString bridgeComponent : bridge.getBridges()) {
+                    MultiLineString targetBridge = (MultiLineString) JTS.transform(bridgeComponent, transform);
 
-                GeodeticCalculator gc = new GeodeticCalculator(LAZ_CS);
-                /*
-                gc.setStartingPosition(JTS.toDirectPosition(DistanceOp.closestPoints(targetBridge, point)[0], LAZ_CS));
-                gc.setDestinationPosition(JTS.toDirectPosition( point.getCoordinate(), LAZ_CS));
-                System.out.println("start = " + gc.getStartingPosition().toString());
-                System.out.println("end = " + gc.getDestinationPosition().toString());
-                double distance = gc.getOrthodromicDistance();
-                */
-                Coordinate coordinate1 = DistanceOp.closestPoints(targetBridge, point)[0];
-                //System.out.println("coordinate1 = " + coordinate1.toString());
-                Coordinate coordinate2 = point.getCoordinate();
-                //System.out.println("coordinate2 = " + coordinate2.toString());
+                    /*
+                    GeodeticCalculator gc = new GeodeticCalculator(LAZ_CS);
+                    gc.setStartingPosition(JTS.toDirectPosition(DistanceOp.closestPoints(targetBridge, point)[0], LAZ_CS));
+                    gc.setDestinationPosition(JTS.toDirectPosition( point.getCoordinate(), LAZ_CS));
+                    System.out.println("start = " + gc.getStartingPosition().toString());
+                    System.out.println("end = " + gc.getDestinationPosition().toString());
+                    double distance = gc.getOrthodromicDistance();
+                    */
 
-                //System.out.println("distance = " + coordinate1.distance(coordinate2));
-                double distance = coordinate1.distance(coordinate2);
+                    Coordinate coordinate1 = DistanceOp.closestPoints(targetBridge, point)[0];
+                    Coordinate coordinate2 = point.getCoordinate();
 
-                if(distance < BRIDGE_WIDTH) {
+                    double distance = coordinate1.distance(coordinate2);
+
+                    if (distance < BRIDGE_WIDTH) {
+                        isTypeBridge = true;
+                        break;
+                    }
+                }
+
+                if(isTypeBridge) {
                     bridgePoints.add(vector3D);
                 }
                 else {
@@ -141,16 +146,59 @@ public class Main {
             write(points, i++);
         }
 
-        // TODO: For every area calculate the normals of the points.
-        // TODO: Construct rays for every deltax path and send them through. See if there is a way (mark them). Otherwise make points.
+    }
+
+    private static boolean mergeBridges(ArrayList<Bridge> bridges) {
+        for(int i = 0; i < bridges.size(); i++) {
+            for(int j = i + 1; j < bridges.size(); j++) {
+                Bridge bridge1 = bridges.get(i);
+                Bridge bridge2 = bridges.get(j);
+                if(bridge1.getSkirt().intersects(bridge2.getSkirt())) {
+                    bridge1.getSkirt().include(bridge2.getSkirt());
+                    bridge1.addBridges(bridge2.getBridges());
+                    bridges.remove(bridge2);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static void print(List<Entry<Vector3D, Geometry>> entries) {
+        for (Entry<Vector3D, Geometry> entry : entries) {
+            System.out.println("z = " + entry.value().getZ());
+        }
+        System.out.println("----------");
     }
 
     private static double interpolateZ(Vector3D bridgePoint) {
-        List<Entry<Vector3D, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.getX(), bridgePoint.getY()), Double.MAX_VALUE, 10));
+        List<Entry<Vector3D, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.getX(), bridgePoint.getY()), Double.MAX_VALUE, 15));
         double values = 0;
         double weightsSum = 0;
+
+        // print(entries);
+        // Sort by Z value.
+        Collections.sort(entries, new Comparator<Entry<Vector3D, Geometry>>() {
+            @Override
+            public int compare(Entry<Vector3D, Geometry> o1, Entry<Vector3D, Geometry> o2) {
+                if(o1.value().getZ() < o2.value().getZ()) {
+                    return -1;
+                }
+                else if(o1.value().getZ() > o2.value().getZ()) {
+                    return 1;
+                }
+                else
+                    return 0;
+            }
+        });
+        entries = entries.subList(0, 10);
+        /*print(entries);
+        if(true)
+            System.exit(0);*/
+
         //System.out.println("size = " + entries.size());
         for (Entry<Vector3D, Geometry> entry : entries) {
+            //double newWeight = 1 / distance(entry.value(), bridgePoint);
             double newWeight = 1 / distance(entry.value(), bridgePoint);
 
             values += newWeight * entry.value().getZ();
@@ -199,7 +247,6 @@ public class Main {
             FeatureCollection collection = featureSource.getFeatures().subCollection(CQL.toFilter(filterStatement));
             FeatureIterator iterator = collection.features();
 
-
             try {
                 while (iterator.hasNext()) {
                     Feature feature = iterator.next();
@@ -224,9 +271,9 @@ public class Main {
                         Bridge bridge = new Bridge();
                         if(sourceGeometry.getValue() instanceof MultiLineString) {
                             MultiLineString multiLineString = (MultiLineString) sourceGeometry.getValue();
-                            bridge.setBridge(multiLineString);
-                            System.out.println(multiLineString.toString());
+                            bridge.addBridge(multiLineString);
                         }
+
                         bridge.setSkirt(bridgeBox.toBounds(LAZ_CS));
                         result.add(bridge);
                     }

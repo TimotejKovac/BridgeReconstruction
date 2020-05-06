@@ -4,26 +4,27 @@ import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.MultiLineString;
 import org.opengis.geometry.BoundingBox;
 
+import java.util.ArrayList;
+
 public class Bridge {
 
-    private MultiLineString bridge;
+    private ArrayList<MultiLineString> bridges;
     private BoundingBox skirt;
 
     public Bridge() {
-
+        bridges = new ArrayList<>();
     }
 
-    public Bridge(MultiLineString bridge, BoundingBox skirt) {
-        this.bridge = bridge;
-        this.skirt = skirt;
+    public void addBridge(MultiLineString bridge) {
+        this.bridges.add(bridge);
     }
 
-    public void setBridge(MultiLineString bridge) {
-        this.bridge = bridge;
+    public void addBridges(ArrayList<MultiLineString> bridges) {
+        this.bridges.addAll(bridges);
     }
 
-    public MultiLineString getBridge() {
-        return bridge;
+    public ArrayList<MultiLineString> getBridges() {
+        return bridges;
     }
 
     public BoundingBox getSkirt() {
