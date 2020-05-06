@@ -45,6 +45,8 @@ public class Main {
 
     private static CoordinateReferenceSystem LAZ_CS, SHP_CS;
 
+    private static Random random;
+
     public static void main(String[] args) throws FactoryException, IOException, TransformException {
 
 
@@ -53,6 +55,8 @@ public class Main {
 
         LASHeader lasHeader = reader.getHeader();
         terrainTree = RTree.create();
+
+        random = new Random();
 
         LAZ_CS = CRS.decode("EPSG:3787");
 
@@ -92,6 +96,7 @@ public class Main {
 
             // TODO: Get bridge width. Maybe even use meters.
             double BRIDGE_WIDTH = 12;
+            double bridgeDistance = 0;
 
             ArrayList<Vector3D> bridgePoints = new ArrayList<>();
             for (Vector3D vector3D : points) {
@@ -121,6 +126,7 @@ public class Main {
                     double distance = coordinate1.distance(coordinate2);
 
                     if (distance < BRIDGE_WIDTH) {
+                        bridgeDistance = distance;
                         isTypeBridge = true;
                         break;
                     }
@@ -136,7 +142,10 @@ public class Main {
 
             ArrayList<Vector3D> generatedPoints = new ArrayList<>();
             for(Vector3D bridgePoint : bridgePoints) {
-                generatedPoints.add(new Vector3D(bridgePoint.getX(), bridgePoint.getY(), interpolateZ(bridgePoint)));
+                double zValue = interpolateZ(bridgePoint);
+                if(zValue == 0)
+                    continue;
+                generatedPoints.add(new Vector3D(bridgePoint.getX(), bridgePoint.getY(), zValue));
             }
             points.addAll(generatedPoints);
             System.out.println("points = " + points.size());
@@ -172,7 +181,11 @@ public class Main {
     }
 
     private static double interpolateZ(Vector3D bridgePoint) {
-        List<Entry<Vector3D, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.getX(), bridgePoint.getY()), Double.MAX_VALUE, 15));
+        if(random.nextDouble() <= 0.3) {
+            return 0;
+        }
+
+        List<Entry<Vector3D, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.getX(), bridgePoint.getY()), Double.MAX_VALUE, 40));
         double values = 0;
         double weightsSum = 0;
 
