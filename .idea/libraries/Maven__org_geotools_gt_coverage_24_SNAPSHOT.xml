@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.geotools:gt-coverage:24-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/geotools/gt-coverage/24-SNAPSHOT/gt-coverage-24-20200506.032235-27.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/geotools/gt-coverage/24-SNAPSHOT/gt-coverage-24-20200506.032235-27-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/geotools/gt-coverage/24-SNAPSHOT/gt-coverage-24-20200506.032235-27-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

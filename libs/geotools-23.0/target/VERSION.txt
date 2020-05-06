@@ -1,3 +1,0 @@
-version: 23.0
-git revision: cd6a0c4b08d28fcedecb52fa93a4c61d6cb57651
-build date: 17-Apr-2020 03:47
