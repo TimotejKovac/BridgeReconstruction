@@ -133,5 +133,7 @@
     <orderEntry type="library" name="Maven: com.conversantmedia:disruptor:1.2.13" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.13" level="project" />
     <orderEntry type="library" name="Maven: com.miglayout:miglayout:swing:3.7" level="project" />
+    <orderEntry type="library" name="Maven: org.geotools:gt-epsg-hsql:24-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: org.hsqldb:hsqldb:2.4.1" level="project" />
   </component>
 </module>
