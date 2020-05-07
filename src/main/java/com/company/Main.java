@@ -75,6 +75,9 @@ public class Main {
 
         ArrayList<Bridge> bridges = readShapeFile(new File("../GJI_SLO_SHP_G_1100/GJI_SLO_1100_ILL_20200402.shp"), bounds);
 
+        // TODO: Add whatever beneath the bridge. Check which types. Probaby water/river under bridge, road etc.
+
+
         System.out.println("bridges = " + bridges.size());
 
         while(!mergeBridges(bridges)) {
@@ -141,6 +144,8 @@ public class Main {
             }
 
             ArrayList<Vector3D> generatedPoints = new ArrayList<>();
+            // TODO: Instead of this calculate a vector parallel to river, road and denstity at the end of bridge.
+            // Then in steps go through and create points.
             for(Vector3D bridgePoint : bridgePoints) {
                 double zValue = interpolateZ(bridgePoint);
                 if(zValue == 0)
@@ -157,6 +162,7 @@ public class Main {
 
     }
 
+    // Merge overlapping bridges
     private static boolean mergeBridges(ArrayList<Bridge> bridges) {
         for(int i = 0; i < bridges.size(); i++) {
             for(int j = i + 1; j < bridges.size(); j++) {
