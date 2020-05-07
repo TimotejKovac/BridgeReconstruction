@@ -44,6 +44,7 @@
     <orderEntry type="library" name="Maven: org.codehaus.plexus:plexus-compiler-api:2.8.4" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.plexus:plexus-compiler-manager:2.8.4" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.codehaus.plexus:plexus-compiler-javac:2.8.4" level="project" />
+    <orderEntry type="library" name="Maven: javax.vecmath:vecmath:1.5.2" level="project" />
     <orderEntry type="library" name="Maven: org.geotools:gt-shapefile:24-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.geotools:gt-main:24-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.locationtech.jts:jts-core:1.16.1" level="project" />
