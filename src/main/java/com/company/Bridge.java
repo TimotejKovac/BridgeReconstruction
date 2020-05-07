@@ -10,6 +10,7 @@ public class Bridge {
 
     private ArrayList<MultiLineString> bridges;
     private BoundingBox skirt;
+    private ArrayList<MultiLineString> intersections;
 
     public Bridge() {
         bridges = new ArrayList<>();
@@ -18,6 +19,8 @@ public class Bridge {
     public void addBridge(MultiLineString bridge) {
         this.bridges.add(bridge);
     }
+
+    public void addIntersection(MultiLineString intersection) {this.intersections.add(intersection);}
 
     public void addBridges(ArrayList<MultiLineString> bridges) {
         this.bridges.addAll(bridges);

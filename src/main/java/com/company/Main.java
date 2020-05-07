@@ -9,6 +9,9 @@ import com.github.davidmoten.rtree2.geometry.internal.PointDouble;
 import com.github.mreutegg.laszip4j.LASHeader;
 import com.github.mreutegg.laszip4j.LASPoint;
 import com.github.mreutegg.laszip4j.LASReader;
+import com.google.common.escape.ArrayBasedCharEscaper;
+import com.sun.media.jai.rmi.VectorState;
+import org.ejml.dense.block.VectorOps_DDRB;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.FeatureSource;
@@ -19,10 +22,7 @@ import org.geotools.geometry.Envelope2D;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.MultiLineString;
-import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.*;
 import org.locationtech.jts.math.Vector3D;
 import org.locationtech.jts.operation.distance.DistanceOp;
 import org.opengis.feature.Feature;
@@ -38,6 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Main {
+
+    private static final String SHAPES_FILE = "../GJI_SLO_SHP_G_1100/GJI_SLO_1100_ILL_20200402.shp";
 
     private static LASReader reader;
 
@@ -73,7 +75,7 @@ public class Main {
         bounds.setCoordinateReferenceSystem(LAZ_CS);
 
 
-        ArrayList<Bridge> bridges = readShapeFile(new File("../GJI_SLO_SHP_G_1100/GJI_SLO_1100_ILL_20200402.shp"), bounds);
+        ArrayList<Bridge> bridges = readShapeFile(new File(SHAPES_FILE), bounds);
 
         // TODO: Add whatever beneath the bridge. Check which types. Probaby water/river under bridge, road etc.
 
@@ -85,28 +87,27 @@ public class Main {
         }
         System.out.println("bridges = " + bridges.size());
 
-        int i = 0;
+        int count = 0;
         for (Bridge bridge : bridges) {
             BoundingBox bridgeBounds = bridge.getSkirt();
             System.out.println("bridgeBounds = " + bridgeBounds.toString());
             LASReader subread = reader.insideRectangle(bridgeBounds.getMinX(), bridgeBounds.getMinY(), bridgeBounds.getMaxX(), bridgeBounds.getMaxY());
 
-            ArrayList<Vector3D> points = new ArrayList<>();
+            ArrayList<Vector3d> points = new ArrayList<>();
             for (LASPoint point : subread.getPoints()) {
-                points.add(new Vector3D(point.getX(), point.getY(), point.getZ()));
+                points.add(new Vector3d(point.getX(), point.getY(), point.getZ()));
             }
 
 
             // TODO: Get bridge width. Maybe even use meters.
             double BRIDGE_WIDTH = 12;
-            double bridgeDistance = 0;
 
-            ArrayList<Vector3D> bridgePoints = new ArrayList<>();
-            for (Vector3D vector3D : points) {
+            ArrayList<Vector3d> bridgePoints = new ArrayList<>();
+            for (Vector3d vector3D : points) {
                 /*if (vector3D.getZ() > minBridgeZ && vector3D.getZ() < maxBridgeZ) {
                     bridgePoints.add(vector3D);
                 }*/
-                Point point = new GeometryFactory().createPoint(new Coordinate(vector3D.getX() * lasHeader.getXScaleFactor(), vector3D.getY() * lasHeader.getYScaleFactor()));
+                Point point = new GeometryFactory().createPoint(new Coordinate(vector3D.x * lasHeader.getXScaleFactor(), vector3D.y * lasHeader.getYScaleFactor()));
 
                 MathTransform transform = CRS.findMathTransform(SHP_CS, LAZ_CS, false);
 
@@ -129,7 +130,6 @@ public class Main {
                     double distance = coordinate1.distance(coordinate2);
 
                     if (distance < BRIDGE_WIDTH) {
-                        bridgeDistance = distance;
                         isTypeBridge = true;
                         break;
                     }
@@ -139,27 +139,60 @@ public class Main {
                     bridgePoints.add(vector3D);
                 }
                 else {
-                    terrainTree = terrainTree.add(vector3D, PointDouble.create(vector3D.getX(), vector3D.getY()));
+                    terrainTree = terrainTree.add(vector3D, PointDouble.create(vector3D.x, vector3D.y));
                 }
             }
 
-            ArrayList<Vector3D> generatedPoints = new ArrayList<>();
+            ArrayList<Vector3d> generatedPoints = new ArrayList<>();
             // TODO: Instead of this calculate a vector parallel to river, road and denstity at the end of bridge.
             // Then in steps go through and create points.
-            for(Vector3D bridgePoint : bridgePoints) {
-                double zValue = interpolateZ(bridgePoint);
-                if(zValue == 0)
-                    continue;
-                generatedPoints.add(new Vector3D(bridgePoint.getX(), bridgePoint.getY(), zValue));
+            for(int i = 0; i < bridge.getNumGeometries(); i++) {
+                LineString partOfBridge = (LineString) bridge.getGeometryN(i);
+                Point A = partOfBridge.getStartPoint();
+                Point B = partOfBridge.getEndPoint();
+                Vector3d normal = (new Vector3d(B.x - A.x, B.y - A.y, 0)
+                        .cross(new Vector3d(A.x, A.y, 1)).normalize();
+
+                // TODO: Get RealVector, realDistance
+                /*Vector3D realVector = realVector.normalize();*/
+                Vector3d realVector = normal;
+                double realDistance = BRIDGE_WIDTH;
+
+                int BRIDGE_STEP = 10;
+
+                for(int j = 0; j < partOfBridge.getLength(); j += BRIDGE_STEP) {
+                    Point pointOnBridge = partOfBridge.getPointN(j);
+                    double STEP = density(pointOnBridge + new Vector3d(realVector).scale(realDistance * 1.2f), 10);
+                    traverseBridge(generatedPoints, pointOnBridge, realVector, realDistance, STEP);
+                    traverseBridge(generatedPoints, pointOnBridge, realVector, realDistance, -STEP);
+                }
             }
+
             points.addAll(generatedPoints);
             System.out.println("points = " + points.size());
             System.out.println("bridge points = " + bridgePoints.size());
             points.removeAll(bridgePoints);
 
-            write(points, i++);
+            write(points, count++);
         }
+    }
 
+    private void traverseBridge(ArrayList<Vector3D> generatedPoints,
+                                Vector3d pointOnBridge,
+                                Vector3d direction,
+                                double realDistance,
+                                int STEP) {
+        for(int k = 0; Math.abs(k) < realDistance; k += STEP) {
+            Vector3d bridgePoint = pointOnBridge + new Vector3d(direction).scale(k);
+            if(density(bridgePoint, 10) > 1)
+                break;
+
+            generatedPoints.add(new Vector3D(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint)));
+        }
+    }
+
+    private int density(Vector3d point, int radius) {
+        return terrainTree.nearest(Geometry.Point(point.x, point.y), radius * 2, 100);
     }
 
     // Merge overlapping bridges
@@ -179,31 +212,19 @@ public class Main {
         return true;
     }
 
-    private static void print(List<Entry<Vector3D, Geometry>> entries) {
-        for (Entry<Vector3D, Geometry> entry : entries) {
-            System.out.println("z = " + entry.value().getZ());
-        }
-        System.out.println("----------");
-    }
-
-    private static double interpolateZ(Vector3D bridgePoint) {
-        if(random.nextDouble() <= 0.3) {
-            return 0;
-        }
-
-        List<Entry<Vector3D, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.getX(), bridgePoint.getY()), Double.MAX_VALUE, 40));
+    private static double interpolateZ(Vector3d bridgePoint) {
+        List<Entry<Vector3d, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y), Double.MAX_VALUE, 40));
         double values = 0;
         double weightsSum = 0;
 
-        // print(entries);
         // Sort by Z value.
-        Collections.sort(entries, new Comparator<Entry<Vector3D, Geometry>>() {
+        Collections.sort(entries, new Comparator<Entry<Vector3d, Geometry>>() {
             @Override
-            public int compare(Entry<Vector3D, Geometry> o1, Entry<Vector3D, Geometry> o2) {
-                if(o1.value().getZ() < o2.value().getZ()) {
+            public int compare(Entry<Vector3d, Geometry> o1, Entry<Vector3D, Geometry> o2) {
+                if(o1.value().z < o2.value().z) {
                     return -1;
                 }
-                else if(o1.value().getZ() > o2.value().getZ()) {
+                else if(o1.value().z > o2.value().z) {
                     return 1;
                 }
                 else
@@ -211,16 +232,13 @@ public class Main {
             }
         });
         entries = entries.subList(0, 10);
-        /*print(entries);
-        if(true)
-            System.exit(0);*/
 
         //System.out.println("size = " + entries.size());
-        for (Entry<Vector3D, Geometry> entry : entries) {
+        for (Entry<Vector3d, Geometry> entry : entries) {
             //double newWeight = 1 / distance(entry.value(), bridgePoint);
             double newWeight = 1 / distance(entry.value(), bridgePoint);
 
-            values += newWeight * entry.value().getZ();
+            values += newWeight * entry.value().z;
             weightsSum += newWeight;
         }
         double z =  values / weightsSum;
@@ -228,15 +246,15 @@ public class Main {
         return z;
     }
 
-    private static double distance(Vector3D a, Vector3D b) {
-        return Math.sqrt(Math.pow(a.getX() - b.getX(), 2) + Math.pow(a.getY() - b.getY(), 2));
+    private static double distance(Vector3d a, Vector3d b) {
+        return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
     }
 
-    private static void write(ArrayList<Vector3D> points, int number) {
+    private static void write(ArrayList<Vector3d> points, int number) {
         try (Writer writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(String.format("test%d.obj", number)), StandardCharsets.UTF_8))) {
             for(Vector3D lasPoint : points) {
-                writer.write("v " + lasPoint.getX() + " " + lasPoint.getY() + " " + lasPoint.getZ() + "\n");
+                writer.write("v " + lasPoint.x + " " + lasPoint.y + " " + lasPoint.z + "\n");
             }
         }
         catch (Exception e) {
