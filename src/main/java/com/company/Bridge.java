@@ -12,6 +12,7 @@ public class Bridge {
     private ArrayList<MultiLineString> bridges;
     private BoundingBox skirt;
     private ArrayList<MultiLineString> intersections;
+    private double width;
 
     public Bridge() {
         bridges = new ArrayList<>();
@@ -29,6 +30,14 @@ public class Bridge {
 
     public ArrayList<MultiLineString> getBridges() {
         return bridges;
+    }
+
+    public void setWidth(double width) {
+        this.width = width;
+    }
+
+    public double getWidth() {
+        return width;
     }
 
     public BoundingBox getSkirt() {

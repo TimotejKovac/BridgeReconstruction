@@ -116,18 +116,16 @@ public class Main {
 
 
             // TODO: Get bridge width. Maybe even use meters.
-            double BRIDGE_WIDTH = 12;
-
             ArrayList<Vector3d> bridgePoints = new ArrayList<>();
 
             // Classify point on the bridge as bridge points.
             for (Vector3d vector3D : points) {
-                Point point = geometryFactory.createPoint(new Coordinate(vector3D.x * lasHeader.getXScaleFactor(), vector3D.y * lasHeader.getYScaleFactor()));
+                Point point = geometryFactory.createPoint(new Coordinate(vector3D.x * scaleFactorX, vector3D.y * scaleFactorY));
 
                 boolean isTypeBridge = false;
                 for(MultiLineString bridgeComponent : bridge.getBridges()) {
                     LineString partOfBridge = (LineString) bridgeComponent.getGeometryN(0);
-                    Polygon bridgeBox = getBridgeBoundingBox(partOfBridge, BRIDGE_WIDTH);
+                    Polygon bridgeBox = getBridgeBoundingBox(partOfBridge, bridge.getWidth());
 
                     if(bridgeBox.contains(point)) {
                         isTypeBridge = true;
@@ -145,102 +143,168 @@ public class Main {
 
             System.out.println("bridgePoints count = " + bridgePoints.size());
 
-            ArrayList<Vector3d> generatedPoints = new ArrayList<>();
-            // TODO: Instead of this calculate a vector parallel to river, road and denstity at the end of bridge.
-            // Then in steps go through and create points.
-            for(MultiLineString bridgeComponent : bridge.getBridges()) {
-                System.out.println("geometries = " + bridgeComponent.getNumGeometries());
-                for (int i = 0; i < bridgeComponent.getNumGeometries(); i++) {
-                    LineString partOfBridge = (LineString) bridgeComponent.getGeometryN(i);
+            ArrayList<Vector3d> generatedPoints;
 
-                    Vector3d A = new Vector3d(partOfBridge.getStartPoint().getX(), partOfBridge.getStartPoint().getY(), 0);
-                    Vector3d B = new Vector3d(partOfBridge.getEndPoint().getX(), partOfBridge.getEndPoint().getY(), 0);
-
-                    Vector3d directionVector = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0);
-                    double bridgeLength = directionVector.length();
-                    directionVector.normalize();
-                    Vector3d normal = getNormal(A, B);
-
-                    // TODO: Get realDistance
-                    Vector3d realVector = getDirectionVector(partOfBridge, others, normal);
-                    double theta = realVector.angle(normal);
-                    double realDistance = Math.sqrt(Math.pow(BRIDGE_WIDTH, 2) + Math.pow(Math.tan(theta) * BRIDGE_WIDTH, 2));
-                    System.out.println("distance = " + BRIDGE_WIDTH);
-                    System.out.println("new distance = " + realDistance);
-                    double BRIDGE_STEP = 1;
-
-                    System.out.println("bridge length = " + bridgeLength);
-                    for (double j = 0; j < bridgeLength; j += BRIDGE_STEP) {
-                        System.out.println("done = " + (j / bridgeLength));
-                        Vector3d bridgePoint = new Vector3d(directionVector);
-
-                        bridgePoint.scale(j);
-                        bridgePoint.add(A);
-
-
-                        // FIXME: STEP. TK
-                        Vector3d afterEnd1 = new Vector3d(bridgePoint);
-                        Vector3d tempDirection = new Vector3d(realVector);
-                        tempDirection.scale(realDistance * 1.2f);
-                        afterEnd1.add(tempDirection);
-
-                        afterEnd1.x = afterEnd1.x * (1/scaleFactorX);
-                        afterEnd1.y = afterEnd1.y * (1/scaleFactorY);
-
-                        Vector3d afterEnd2 = new Vector3d(bridgePoint);
-                        Vector3d tempDirection2 = new Vector3d(realVector);
-                        tempDirection2.scale(-realDistance * 1.2f);
-                        afterEnd2.add(tempDirection2);
-
-                        afterEnd2.x = afterEnd2.x * (1/scaleFactorX);
-                        afterEnd2.y = afterEnd2.y * (1/scaleFactorY);
-
-                        System.out.println("density check ");
-
-                        ArrayList<Vector3d> neighbours1 = density(afterEnd1, 20, 7);
-                        ArrayList<Vector3d> neighbours2 = density(afterEnd2, 20, 7);
-                        ArrayList<Vector3d> neighbours = new ArrayList<>();
-                        neighbours.addAll(neighbours1);
-                        neighbours.addAll(neighbours2);
-
-                        int density = Math.max(neighbours1.size(), neighbours2.size());
-                        System.out.println("density = " + density);
-
-                        double STEP = 3;
-                        if(density > 0)
-                            STEP = 1f / density;
-
-
-                        BRIDGE_STEP = STEP;
-
-                        System.out.println("STEP = " + STEP);
-
-
-                        System.out.println(lasHeader.getXScaleFactor());
-
-                        for(double k = realDistance; k > 0; k -= STEP) {
-                            traverseBridge(generatedPoints, bridgePoint, realVector, k, neighbours);
-                            traverseBridge(generatedPoints, bridgePoint, realVector, -k, neighbours);
-                        }
-
-                        System.out.println(bridgeBounds.contains(bridgePoint.x, bridgePoint.y));
-
-                        bridgePoint.x = bridgePoint.x * (1/scaleFactorX);
-                        bridgePoint.y = bridgePoint.y * (1/scaleFactorY);
-                        generatedPoints.add(new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, neighbours)));
-                    }
-                }
-            }
+            generatedPoints = restoreUnderTheBridge(bridge, others);
+            // TODO: Get real Z-value for bottom part of bridge.
+            //generatedPoints = restoreBridge(bridge, bridgePoints.get(0).getZ());
 
             points.addAll(generatedPoints);
-            System.out.println("points = " + points.size());
-            System.out.println("bridge points = " + bridgePoints.size());
             points.removeAll(bridgePoints);
 
             write(points, count++);
             //write(generatedPoints, count++);
             System.exit(0);
         }
+    }
+
+    private static ArrayList<Vector3d> restoreBridge(Bridge bridge, double bridgeZ) {
+        ArrayList<Vector3d> generatedPoints = new ArrayList<>();
+        for(MultiLineString bridgeComponent : bridge.getBridges()) {
+            System.out.println("geometries = " + bridgeComponent.getNumGeometries());
+            for (int i = 0; i < bridgeComponent.getNumGeometries(); i++) {
+                LineString partOfBridge = (LineString) bridgeComponent.getGeometryN(i);
+
+                Vector3d A = new Vector3d(partOfBridge.getStartPoint().getX(), partOfBridge.getStartPoint().getY(), 0);
+                Vector3d B = new Vector3d(partOfBridge.getEndPoint().getX(), partOfBridge.getEndPoint().getY(), 0);
+
+                Vector3d directionVector = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0);
+                directionVector.normalize();
+                Vector3d normal = getNormal(A, B);
+
+                Vector3d realVector = normal;
+                double realDistance = bridge.getWidth();
+                double BRIDGE_STEP = 1;
+
+                Polygon polygon = getBridgeBoundingBox(partOfBridge, bridge.getWidth());
+
+                double bridgeLength = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0).length();
+                double STEP = 1;
+
+                ArrayList<Vector3d> neighbours = new ArrayList<>();
+                for(Coordinate coordinate : polygon.getCoordinates()) {
+                    neighbours.add(new Vector3d(coordinate.x, coordinate.y, bridgeZ-200));
+                }
+
+                System.out.println("bridge length = " + bridgeLength);
+                for (double j = 0; j < bridgeLength; j += BRIDGE_STEP) {
+                    Vector3d bridgePoint = new Vector3d(directionVector);
+                    bridgePoint.scale(j);
+                    bridgePoint.add(A);
+
+                    for(double k = realDistance; k > 0; k -= STEP) {
+                        traverseBridge(generatedPoints, bridgePoint, realVector, k, realDistance, neighbours);
+                        traverseBridge(generatedPoints, bridgePoint, realVector, -k, realDistance, neighbours);
+                    }
+                    bridgePoint.x = bridgePoint.x * (1/scaleFactorX);
+                    bridgePoint.y = bridgePoint.y * (1/scaleFactorY);
+                    generatedPoints.add(new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours)));
+                }
+            }
+        }
+        return generatedPoints;
+    }
+
+    private static ArrayList<Vector3d> restoreUnderTheBridge(Bridge bridge, List<MultiLineString> others) {
+        ArrayList<Vector3d> generatedPoints = new ArrayList<>();
+        for(MultiLineString bridgeComponent : bridge.getBridges()) {
+            System.out.println("geometries = " + bridgeComponent.getNumGeometries());
+            for (int i = 0; i < bridgeComponent.getNumGeometries(); i++) {
+                LineString partOfBridge = (LineString) bridgeComponent.getGeometryN(i);
+
+                Vector3d A = new Vector3d(partOfBridge.getStartPoint().getX(), partOfBridge.getStartPoint().getY(), 0);
+                Vector3d B = new Vector3d(partOfBridge.getEndPoint().getX(), partOfBridge.getEndPoint().getY(), 0);
+
+                Vector3d directionVector = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0);
+                directionVector.normalize();
+                Vector3d normal = getNormal(A, B);
+
+
+                Vector3d realVector = getDirectionVector(partOfBridge, others, normal);
+                double theta = realVector.angle(normal);
+                double realDistance = Math.sqrt(Math.pow(bridge.getWidth(), 2) + Math.pow(Math.tan(theta) * bridge.getWidth(), 2));
+                double BRIDGE_STEP = 1;
+
+                double delta = Math.sqrt(Math.pow(realDistance, 2) - Math.pow(bridge.getWidth(), 2));
+                A = addVectors(A, scaleVector(directionVector, -delta));
+                B = addVectors(B, scaleVector(directionVector, delta));
+
+                double bridgeLength = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0).length();
+
+                System.out.println("bridge length = " + bridgeLength);
+                for (double j = 0; j < bridgeLength; j += BRIDGE_STEP) {
+                    System.out.println("done = " + (j / bridgeLength));
+                    Vector3d bridgePoint = new Vector3d(directionVector);
+                    bridgePoint.scale(j);
+                    bridgePoint.add(A);
+
+                    double STEP = 1;
+
+                    ArrayList<Vector3d> neighbours = new ArrayList<>();
+                    neighbours.addAll(getNeighbours(bridgePoint, realVector, realDistance, STEP*150, 1));
+                    neighbours.addAll(getNeighbours(bridgePoint, realVector, realDistance, STEP*150, -1));
+
+                    /*for(Vector3d vector3d : neighbours) {
+                        vector3d.z = 27000;
+                        generatedPoints.add(vector3d);
+                    }*/
+
+                    BRIDGE_STEP = STEP;
+
+                    System.out.println("STEP = " + STEP);
+
+                    for(double k = realDistance; k > 0; k -= STEP) {
+                        traverseBridge(generatedPoints, bridgePoint, realVector, k, realDistance, neighbours);
+                        traverseBridge(generatedPoints, bridgePoint, realVector, -k, realDistance, neighbours);
+                    }
+
+                    bridgePoint.x = bridgePoint.x * (1/scaleFactorX);
+                    bridgePoint.y = bridgePoint.y * (1/scaleFactorY);
+                    generatedPoints.add(new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours)));
+                }
+            }
+        }
+        return generatedPoints;
+    }
+
+    private static List<Vector3d> getNeighbours(Vector3d bridgePoint, Vector3d realVector, double realDistance, double STEP, int negative) {
+        List<Vector3d> neighbours = new ArrayList<>();
+        double searchStep = 1.1f;
+        while(neighbours.size() < 2) {
+            Vector3d afterEnd = new Vector3d(bridgePoint);
+            Vector3d tempDirection = new Vector3d(realVector);
+            tempDirection.scale(realDistance * searchStep * negative);
+            afterEnd.add(tempDirection);
+
+            afterEnd.x = afterEnd.x * (1/scaleFactorX);
+            afterEnd.y = afterEnd.y * (1/scaleFactorY);
+
+            neighbours = density(afterEnd, STEP, Integer.MAX_VALUE);
+            searchStep += 0.1;
+            if(searchStep > 1.6f)
+                break;
+        }
+        if(neighbours.size() > 10) {
+            // Sort by Z value.
+            Collections.sort(neighbours, new Comparator<Vector3d>() {
+                @Override
+                public int compare(Vector3d o1, Vector3d o2) {
+                /*System.out.println(o1.value().z);
+                System.out.println(o2.value().z);*/
+                    if(o1.z < o2.z) {
+                        return -1;
+                    }
+                    else if(o1.z > o2.z) {
+                        return 1;
+                    }
+                    else
+                        return 0;
+                }
+            });
+            neighbours = neighbours.subList(0, 10);
+        }
+
+        return neighbours;
     }
 
     private static Vector3d getDirectionVector(LineString lineString, List<MultiLineString> others, Vector3d fallBack) {
@@ -311,10 +375,17 @@ public class Main {
         return result;
     }
 
+    private static Vector3d scaleVector(Vector3d vector1, double scaleFactor) {
+        Vector3d result = new Vector3d(vector1);
+        result.scale(scaleFactor);
+        return result;
+    }
+
     private static void traverseBridge(ArrayList<Vector3d> generatedPoints,
                                        Vector3d pointOnBridge,
                                        Vector3d direction,
                                        double k,
+                                       double realDistance,
                                        ArrayList<Vector3d> neighbours) {
         Vector3d bridgePoint = new Vector3d(pointOnBridge);
 
@@ -330,7 +401,7 @@ public class Main {
         /*if(density(bridgePoint, generatedPoints, 20) > 0)
             return;*/
 
-        Vector3d result = new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, neighbours));
+        Vector3d result = new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours));
         generatedPoints.add(result);
         //System.out.println("result = " + result.toString());
         //terrainTree = terrainTree.add(result, PointDouble.create(result.x, result.y));
@@ -345,7 +416,7 @@ public class Main {
         return count;
     }*/
 
-    private static ArrayList<Vector3d> density(Vector3d point, int radius, int maxCount) {
+    private static ArrayList<Vector3d> density(Vector3d point, double radius, int maxCount) {
         Iterator<Entry<Vector3d, Geometry>> iterator = terrainTree.nearest(Geometries.point(point.x, point.y), radius, maxCount).iterator();
         ArrayList<Vector3d> result = new ArrayList<>();
         while(iterator.hasNext()) {
@@ -371,17 +442,30 @@ public class Main {
         return true;
     }
 
-    private static double interpolateZ(Vector3d bridgePoint, ArrayList<Vector3d> neighbours) {
+    private static double interpolateZ(Vector3d bridgePoint, double realDistance, ArrayList<Vector3d> neighbours) {
         List<Vector3d> comparators = new ArrayList<>();
-        if(neighbours.size() > 0) {
-            comparators = neighbours;
-        }
-        else {
-            List<Entry<Vector3d, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y), Double.MAX_VALUE, 40));
+
+        List<Entry<Vector3d, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y),  realDistance, 10));
+        /*for(Entry<Vector3d, Geometry> entry : entries) {
+            comparators.add(entry.value());
+        }*/
+        comparators.addAll(neighbours);
+
+
+        boolean failsafe = false;
+        if (comparators.size() == 0) {
+            //System.err.println("ERROR NO FOUND!");
+            entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y), Double.MAX_VALUE, 40));
             for(Entry<Vector3d, Geometry> entry : entries) {
                 comparators.add(entry.value());
             }
+            failsafe = true;
         }
+        /*else {
+            System.err.println("NOT FAILSAFE");
+        }*/
+
+
         double values = 0;
         double weightsSum = 0;
 
@@ -401,7 +485,11 @@ public class Main {
                     return 0;
             }
         });
-        comparators = comparators.subList(0, Math.min(10, comparators.size() - 1));
+
+       // System.out.println(Arrays.toString(comparators.toArray()));
+        if (failsafe) {
+            comparators = comparators.subList(0, 10);
+        }
 
         //System.out.println("size = " + entries.size());
         for (Vector3d entry : comparators) {
@@ -454,10 +542,6 @@ public class Main {
             System.out.println("Reading content " + typeName);
 
             FeatureSource featureSource = dataStore.getFeatureSource(typeName);
-
-            // Only get the bridges.
-            //String filterStatement = "\"SIF_VRSTE\" = 1102 AND \"ATR2\" = 1 AND ID = 17530217";
-
             FeatureCollection collection = featureSource.getFeatures();
             if(filter != null)
                 collection = collection.subCollection(CQL.toFilter(filter));
@@ -469,13 +553,6 @@ public class Main {
                     Feature feature = iterator.next();
                     GeometryAttribute sourceGeometry = feature.getDefaultGeometryProperty();
 
-
-                    //if(bounds.intersects(sourceGeometry.getBounds()))
-
-                    //System.out.println("type = " + sourceGeometry.getBounds().toString());
-                    //System.out.println("bbox = " + bounds.toString());
-
-
                     CoordinateReferenceSystem coordinateReferenceSystem = sourceGeometry.getBounds().getCoordinateReferenceSystem();
                     BoundingBox bridgeBox = sourceGeometry.getBounds();
                     BoundingBox lasBox = bounds.toBounds(coordinateReferenceSystem);
@@ -486,6 +563,8 @@ public class Main {
                             Bridge bridge = new Bridge();
                             bridge.addBridge((MultiLineString) sourceGeometry.getValue());
                             bridge.setSkirt(bridgeBox);
+                            // TODO: Get real width. TK
+                            bridge.setWidth(11);
                             result.add(bridge);
                         }
                         else if(type == OTHER) {
