@@ -2,6 +2,7 @@ package com.company;
 
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.Polygon;
 import org.opengis.geometry.BoundingBox;
 
 import java.util.ArrayList;
