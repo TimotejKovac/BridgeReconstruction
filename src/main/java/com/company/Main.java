@@ -9,7 +9,6 @@ import com.github.davidmoten.rtree2.geometry.internal.PointDouble;
 import com.github.mreutegg.laszip4j.LASHeader;
 import com.github.mreutegg.laszip4j.LASPoint;
 import com.github.mreutegg.laszip4j.LASReader;
-import org.ejml.dense.block.VectorOps_DDRB;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.FeatureSource;
@@ -42,7 +41,7 @@ public class Main {
 
     private static LASReader reader;
 
-    private static RTree<Vector3d, Geometry> terrainTree;
+    private static RTree<Vector3d, Geometry> terrainTree, bridgeTree;
 
     private static double scaleFactorX, scaleFactorY;
 
@@ -62,7 +61,7 @@ public class Main {
         geometryFactory = new GeometryFactory();
 
         terrainTree = RTree.create();
-
+        bridgeTree = RTree.create();
 
 
         double left = lasHeader.getMinX();
@@ -198,7 +197,10 @@ public class Main {
                     }
                     bridgePoint.x = bridgePoint.x * (1/scaleFactorX);
                     bridgePoint.y = bridgePoint.y * (1/scaleFactorY);
-                    generatedPoints.add(new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours)));
+
+                    Vector3d centerPoint = new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours));
+                    bridgeTree = bridgeTree.add(centerPoint, PointDouble.create(centerPoint.x, centerPoint.y));
+                    generatedPoints.add(centerPoint);
                 }
             }
         }
@@ -281,28 +283,42 @@ public class Main {
 
             neighbours = density(afterEnd, STEP, Integer.MAX_VALUE);
             searchStep += 0.1;
-            if(searchStep > 1.6f)
+            if(searchStep > 1.8f)
                 break;
         }
-        if(neighbours.size() > 10) {
-            // Sort by Z value.
-            Collections.sort(neighbours, new Comparator<Vector3d>() {
-                @Override
-                public int compare(Vector3d o1, Vector3d o2) {
+
+        Collections.sort(neighbours, new Comparator<Vector3d>() {
+            @Override
+            public int compare(Vector3d o1, Vector3d o2) {
                 /*System.out.println(o1.value().z);
                 System.out.println(o2.value().z);*/
-                    if(o1.z < o2.z) {
-                        return -1;
-                    }
-                    else if(o1.z > o2.z) {
-                        return 1;
-                    }
-                    else
-                        return 0;
+                if(o1.z < o2.z) {
+                    return -1;
                 }
-            });
+                else if(o1.z > o2.z) {
+                    return 1;
+                }
+                else
+                    return 0;
+            }
+        });
+        if(neighbours.size() > 10) {
+            // Sort by Z value.
             neighbours = neighbours.subList(0, 10);
         }
+        double deltaMax = 0;
+        for(int i = 0; i < neighbours.size() - 1; i++) {
+            if(Math.abs(neighbours.get(i).z - neighbours.get(i+1).z) > deltaMax) {
+                deltaMax = Math.abs(neighbours.get(i).z - neighbours.get(i+1).z);
+            }
+            if(deltaMax > 100) {
+                neighbours = neighbours.subList(0, i);
+                break;
+            }
+        }
+
+
+        System.err.println("MAX DELTA = " + deltaMax);
 
         return neighbours;
     }
@@ -402,6 +418,7 @@ public class Main {
             return;*/
 
         Vector3d result = new Vector3d(bridgePoint.x, bridgePoint.y, interpolateZ(bridgePoint, realDistance, neighbours));
+        bridgeTree = bridgeTree.add(result, PointDouble.create(result.x, result.y));
         generatedPoints.add(result);
         //System.out.println("result = " + result.toString());
         //terrainTree = terrainTree.add(result, PointDouble.create(result.x, result.y));
@@ -445,25 +462,18 @@ public class Main {
     private static double interpolateZ(Vector3d bridgePoint, double realDistance, ArrayList<Vector3d> neighbours) {
         List<Vector3d> comparators = new ArrayList<>();
 
-        List<Entry<Vector3d, Geometry>> entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y),  realDistance, 10));
-        /*for(Entry<Vector3d, Geometry> entry : entries) {
-            comparators.add(entry.value());
-        }*/
         comparators.addAll(neighbours);
-
 
         boolean failsafe = false;
         if (comparators.size() == 0) {
+
             //System.err.println("ERROR NO FOUND!");
-            entries = Iterables.toList(terrainTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y), Double.MAX_VALUE, 40));
+            List<Entry<Vector3d, Geometry>> entries = Iterables.toList(bridgeTree.nearest(Geometries.point(bridgePoint.x, bridgePoint.y), realDistance*100, 10));
             for(Entry<Vector3d, Geometry> entry : entries) {
                 comparators.add(entry.value());
             }
             failsafe = true;
         }
-        /*else {
-            System.err.println("NOT FAILSAFE");
-        }*/
 
 
         double values = 0;
@@ -487,9 +497,9 @@ public class Main {
         });
 
        // System.out.println(Arrays.toString(comparators.toArray()));
-        if (failsafe) {
+        /*if (comparators.si) {
             comparators = comparators.subList(0, 10);
-        }
+        }*/
 
         //System.out.println("size = " + entries.size());
         for (Vector3d entry : comparators) {
