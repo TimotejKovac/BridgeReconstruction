@@ -16,12 +16,15 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.geometry.Envelope2D;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.*;
 import org.opengis.feature.Feature;
 import org.opengis.feature.GeometryAttribute;
 import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 
 import javax.vecmath.Vector3d;
@@ -30,13 +33,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.company.Main.TYPE.BRIDGES;
-import static com.company.Main.TYPE.OTHER;
+import static com.company.Main.TYPE.*;
 
 public class Main {
 
     private static final String INFRASTRUCTURE_FILE = "../GJI_SLO_SHP_G_1100_D48/GJI_SLO_1100_ILL_D48_20200508.shp";
-    //private static final String INFRASTRUCTURE_FILE = "../GJI_SLO_SHP_G_1100/GJI_SLO_1100_ILL_20200402.shp";
+    private static final String ROADS_FILE = "../DTM_TN_D48/TN_CESTE_L.shp";
     private static final String WATERS_FILE = "../DTM_HY_D48/HY_TEKOCE_VODE_L.shp";
 
     private static LASReader reader;
@@ -46,6 +48,11 @@ public class Main {
     private static double scaleFactorX, scaleFactorY;
 
     private static GeometryFactory geometryFactory;
+
+    private static List<Road> roads;
+
+
+    private static HashMap<Long, long[]> dataIds = new HashMap<>();
 
 
     public static void main(String[] args) throws FactoryException, IOException, TransformException {
@@ -63,6 +70,11 @@ public class Main {
         terrainTree = RTree.create();
         bridgeTree = RTree.create();
 
+        dataIds.put(17530217L, new long[] {469434, 458364});
+        dataIds.put(17530216L, new long[] {477696, 458364});
+        dataIds.put(17530116L, new long[] {27611, 458366});
+        dataIds.put(17530215L, new long[] {477693, 458347});
+
 
         double left = lasHeader.getMinX();
         double right = lasHeader.getMaxX();
@@ -76,22 +88,35 @@ public class Main {
         bounds.height = bottom - top;
         //bounds.setCoordinateReferenceSystem(LAZ_CS);
 
+        String roadsFilter = "";
+        String riverFilter = "";
+        for(Map.Entry<Long, long[]> entry : dataIds.entrySet()) {
+            if(riverFilter.length() > 0) {
+                roadsFilter += " OR ";
+                riverFilter += " OR ";
+            }
+            roadsFilter += "\"TN_DTM_ID\"= " + entry.getValue()[0];
+            riverFilter += "\"HY_DTM_ID\"= " + entry.getValue()[1];
+        }
+
+        roads = readShapeFile(new File(ROADS_FILE), roadsFilter, bounds, ROADS)
+                .stream()
+                .map(object -> ((Road) object))
+                .collect(Collectors.toList());
+        System.out.println("roads size = " + roads.size());
 
         List<Bridge> bridges = readShapeFile(new File(INFRASTRUCTURE_FILE), "\"SIF_VRSTE\" = 1102 AND \"ATR2\" = 1", bounds, BRIDGES)
                 .stream()
                 .map(object -> ((Bridge) object))
                 .collect(Collectors.toList());
+        System.out.println("bridge size = " + bridges.size());
 
-        //"\"TIP_PREH\"=9999"
-        //
-        List<MultiLineString> others = readShapeFile(new File(WATERS_FILE), "\"HY_DTM_ID\"=458364", bounds, OTHER)
+        List<River> rivers = readShapeFile(new File(WATERS_FILE), riverFilter, bounds, RIVERS)
                 .stream()
-                .map(object -> ((MultiLineString) object))
+                .map(object -> ((River) object))
                 .collect(Collectors.toList());
+        System.out.println("rivers size = " + rivers.size());
 
-        System.out.println("others = " + others.size());
-
-        System.out.println("bridges = " + bridges.size());
 
         while(!mergeBridges(bridges)) {
             System.out.println("Repeat...");
@@ -144,12 +169,12 @@ public class Main {
 
             ArrayList<Vector3d> generatedPoints;
 
-            generatedPoints = restoreUnderTheBridge(bridge, others);
+            generatedPoints = restoreUnderTheBridge(bridge, rivers);
             // TODO: Get real Z-value for bottom part of bridge.
             generatedPoints.addAll(restoreBridge(bridge, bridgePoints.get(0).getZ()));
 
             points.addAll(generatedPoints);
-            points.removeAll(bridgePoints);
+            //points.removeAll(bridgePoints);
 
             write(points, count++);
             //write(generatedPoints, count++);
@@ -207,7 +232,7 @@ public class Main {
         return generatedPoints;
     }
 
-    private static ArrayList<Vector3d> restoreUnderTheBridge(Bridge bridge, List<MultiLineString> others) {
+    private static ArrayList<Vector3d> restoreUnderTheBridge(Bridge bridge, List<River> rivers) {
         ArrayList<Vector3d> generatedPoints = new ArrayList<>();
         for(MultiLineString bridgeComponent : bridge.getBridges()) {
             System.out.println("geometries = " + bridgeComponent.getNumGeometries());
@@ -222,7 +247,7 @@ public class Main {
                 Vector3d normal = getNormal(A, B);
 
 
-                Vector3d realVector = getDirectionVector(partOfBridge, others, normal);
+                Vector3d realVector = getDirectionVector(bridge, partOfBridge, rivers, normal);
                 double theta = realVector.angle(normal);
                 double realDistance = Math.sqrt(Math.pow(bridge.getWidth(), 2) + Math.pow(Math.tan(theta) * bridge.getWidth(), 2));
                 double BRIDGE_STEP = 1;
@@ -323,26 +348,27 @@ public class Main {
         return neighbours;
     }
 
-    private static Vector3d getDirectionVector(LineString lineString, List<MultiLineString> others, Vector3d fallBack) {
+    private static Vector3d getDirectionVector(Bridge bridge, LineString lineString, List<River> others, Vector3d fallBack) {
+        long targetId = dataIds.get(bridge.getId())[1];
 
-        // TODO: FIX this. TK
-        for(MultiLineString multiLineString : others) {
-            for(int i = 0; i < multiLineString.getNumGeometries(); i++) {
-                LineString partOfBridge = (LineString) multiLineString.getGeometryN(i);
-                //LineString partOfBridge = (LineString) multiLineString.getGeometryN(i);
-                System.out.println("partOfBridge ? " + partOfBridge.getBoundary().toString());
-                System.out.println("lineString ? " + lineString.getBoundary().toString());
-                //if (partOfBridge.intersects(lineString)) {
-                    Vector3d A = new Vector3d(partOfBridge.getStartPoint().getX(), partOfBridge.getStartPoint().getY(), 0);
-                    Vector3d B = new Vector3d(partOfBridge.getEndPoint().getX(), partOfBridge.getEndPoint().getY(), 0);
-                    Vector3d directionVector = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0);
-                    directionVector.normalize();
-                    System.out.println("FOUNDDDDD!!! dir = " + directionVector.toString());
-                System.out.println("FOUNDDDDD!!! normal = " + fallBack.toString());
+        for(River river : others) {
+            if(river.getId() != targetId)
+                continue;
 
-                return directionVector;
-                //}
-            }
+            LineString partOfBridge = (LineString) river.getRiver().getGeometryN(0);
+            //LineString partOfBridge = (LineString) multiLineString.getGeometryN(i);
+            System.out.println("partOfBridge ? " + partOfBridge.getBoundary().toString());
+            System.out.println("lineString ? " + lineString.getBoundary().toString());
+            System.err.println("INTERSECTS = " + partOfBridge.intersects(lineString));
+            Vector3d A = new Vector3d(partOfBridge.getStartPoint().getX(), partOfBridge.getStartPoint().getY(), 0);
+            Vector3d B = new Vector3d(partOfBridge.getEndPoint().getX(), partOfBridge.getEndPoint().getY(), 0);
+            Vector3d directionVector = new Vector3d(B.getX() - A.getX(), B.getY() - A.getY(), 0);
+            directionVector.normalize();
+            System.out.println("FOUNDDDDD!!! dir = " + directionVector.toString());
+            System.out.println("FOUNDDDDD!!! normal = " + fallBack.toString());
+
+            return directionVector;
+
         }
         System.out.println("NOT FOUNDD!!!");
 
@@ -568,25 +594,48 @@ public class Main {
                     BoundingBox lasBox = bounds.toBounds(coordinateReferenceSystem);
 
                     if(bridgeBox.intersects(lasBox)) {
+
                         if(type == BRIDGES) {
                             System.out.println("FOUND!");
-                            Bridge bridge = new Bridge();
-                            bridge.addBridge((MultiLineString) sourceGeometry.getValue());
+                            Bridge bridge = new Bridge((long)feature.getProperties("ID").iterator().next().getValue());
+
+                            MultiLineString targetBridge = (MultiLineString) sourceGeometry.getValue();
+
+                            bridge.addBridge(targetBridge);
                             bridge.setSkirt(bridgeBox);
-                            // TODO: Get real width. TK
-                            bridge.setWidth(11);
+                            long roadId = dataIds.get(bridge.getId())[0];
+
+                            for(Object object : roads) {
+                                Road road = (Road) object;
+                                if(road.getId() == roadId) {
+                                    System.err.println("SUCESSS!! " + road.getWidth());
+                                    bridge.setWidth(road.getWidth());
+                                }
+                            }
                             result.add(bridge);
                         }
-                        else if(type == OTHER) {
-                            result.add(sourceGeometry.getValue());
+                        else if(type == ROADS) {
+                            Road road = new Road((long)feature.getProperties("TN_DTM_ID").iterator().next().getValue());
+                            if(feature.getProperties("SIRVOZ").iterator().hasNext()) {
+                                double roadWidth = (double) feature.getProperties("SIRVOZ").iterator().next().getValue();
+                                road.setWidth(roadWidth);
+                            }
+                            MultiLineString targetBridge = (MultiLineString) sourceGeometry.getValue();
+
+                            road.setRoad(targetBridge);
+                            result.add(road);
+                        }
+                        else if(type == RIVERS) {
+                            River river = new River((long)feature.getProperties("HY_DTM_ID").iterator().next().getValue());
+                            MultiLineString targetBridge = (MultiLineString) sourceGeometry.getValue();
+                            river.setRiver(targetBridge);
+                            result.add(river);
                         }
                     }
                 }
             } finally {
                 iterator.close();
             }
-
-
         }
         catch (Throwable e) {
             e.printStackTrace();
@@ -597,7 +646,8 @@ public class Main {
 
     enum TYPE {
         BRIDGES,
-        OTHER
+        ROADS,
+        RIVERS
     }
 
 

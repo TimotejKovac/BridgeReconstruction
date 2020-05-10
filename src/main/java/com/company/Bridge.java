@@ -9,13 +9,20 @@ import java.util.ArrayList;
 
 public class Bridge {
 
+    private long id;
+
     private ArrayList<MultiLineString> bridges;
     private BoundingBox skirt;
     private ArrayList<MultiLineString> intersections;
     private double width;
 
-    public Bridge() {
+    public Bridge(long id) {
+        this.id = id;
         bridges = new ArrayList<>();
+    }
+
+    public long getId() {
+        return id;
     }
 
     public void addBridge(MultiLineString bridge) {
