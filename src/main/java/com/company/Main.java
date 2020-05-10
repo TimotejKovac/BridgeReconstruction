@@ -146,7 +146,7 @@ public class Main {
 
             generatedPoints = restoreUnderTheBridge(bridge, others);
             // TODO: Get real Z-value for bottom part of bridge.
-            //generatedPoints = restoreBridge(bridge, bridgePoints.get(0).getZ());
+            generatedPoints.addAll(restoreBridge(bridge, bridgePoints.get(0).getZ()));
 
             points.addAll(generatedPoints);
             points.removeAll(bridgePoints);
@@ -318,7 +318,7 @@ public class Main {
         }
 
 
-        System.err.println("MAX DELTA = " + deltaMax);
+        //System.err.println("MAX DELTA = " + deltaMax);
 
         return neighbours;
     }
