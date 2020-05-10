@@ -132,27 +132,31 @@ Our approach can be seen on figure~\ref{fig2} and is described bellow.
     \label{fig2}
 \end{figure}
 \begin{itemize}
-\item{1. define the bridge polygon from the SHP file and remove every point that is determined to belong to a bridge.}
-\item{2. generate values x and y along the bridge in such a way that they run parallel to the valley bellow the bridge. }
-\item{3. sample points from both sides of this line (terrain adjecent to the bridge marked with A and B). 
+\item{1. Define the bridge polygon from the SHP file and temporary remove every point that is determined to belong to a bridge.}
+\item{2. Generate values x and y along the bridge in such a way that they run parallel to the valley bellow the bridge. }
+\item{3. Sample points from both sides of this line (terrain adjecent to the bridge marked with A and B). 
 If there are too few points sampled then continue searching in the same direction until some threshold (white dotted circle).
 If there are still not enough points to be found sample the surrounging area of the terrain that has already been completed (yellow circle).}
 \item{4. Process the sampled points to remove any objects that aren't terrain.}
 \item{5. Interpolate the z coordinate with distance as a weight on sampled points.}
 \end{itemize}
 
-
-
-
-%TODO: Talk about performance
+An important thing to note is also that bridges werent always saved as a simple rectangle but were made of many bridge sections that together formed a bridge.
+Because of this and given that the orientation of each bridge section could have a slightly diffferent angle so this process had to be repeated on each one independently.
 
 \section{Bridge reconstruction}
 
-
-
+Because of the nature of how the LiDAR data is gathered the surface bellow the bridge was missing.
+This was then reconstructed using a similar traversing approach as the one described in the previous section. 
+The main difference being the direction in which lines were being generated.
+Here they were generated perpendicular to the bridge orientation.
+Instead of using all of the points only four key points were used for interpolation, these being the four edges of the bridge section.
+Like for the terrain generation here this interpolation had to be made to each of the bridge sections that formed a single bridge.
 
 \section{Results}
 
+The whole reconstruction process of the bridge and terrain on an example of two highway bridges produced the results in under a minute, but this may vary based on the system performance.
+The cloud points before and after the reconstruction process can be seen in figures ~\ref{fig3} and ~\ref{fig4}.
 
 \begin{figure}[ht]
     \centering
@@ -174,7 +178,7 @@ If there are still not enough points to be found sample the surrounging area of 
 
 \section{Further work}
 
-One of the unsolved problems in our approach is that of saving the reconstructed data in LAZ format.
+One of the issues we didn't solve is that of saving the reconstructed data in LAZ format.
 We weren't sucessful in finding any free library that we could use to save the reconstructed data in the same LAZ format as the input file.
 That is why the system outputs a simple OBJ file which contains the reconstructed bridge points alongside with the original points inside of a certain circumference of the bridge.
 
@@ -184,8 +188,9 @@ For now only rivers have been supported but also roads, railways or any other ki
 \section{Conclusion}
 
 We were sucessful in implementing a rather robust approach for reconstructing bridges and terrain underneath.
-
-
+The reconstruction algorhitm is aware of the natural flow of the terrain and the points that are important for interpolation.
+Compared to simple interpolation methods our approach provided better results while still giving the result in an acceptable amount of time.
+Further work could be done improving this approach especially on reconstructing the bridge.
 
 %\bibliographystyle{eg-alpha}
 \bibliographystyle{eg-alpha-doi}
