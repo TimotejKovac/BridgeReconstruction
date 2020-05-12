@@ -177,8 +177,7 @@ public class Main {
             //points.removeAll(bridgePoints);
 
             write(points, count++);
-            //write(generatedPoints, count++);
-            System.exit(0);
+            //System.exit(0);
         }
     }
 
