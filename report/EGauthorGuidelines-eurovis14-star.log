@@ -1,9 +1,13 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 2.9.7400 64-bit) (preloaded format=pdflatex 2020.5.1)  10 MAY 2020 14:59
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 2.9.7400 64-bit) (preloaded format=pdflatex 2020.5.1)  13 MAY 2020 15:41
 entering extended mode
-**./EGauthorGuidelines-eurovis14-star.tex
-(EGauthorGuidelines-eurovis14-star.tex
+**D:/Documents/FRI/NRG/BridgeReconstruction/report/EGauthorGuidelines-eurovis14
+-star.tex
+
+(D:/Documents/FRI/NRG/BridgeReconstruction/report/EGauthorGuidelines-eurovis14-
+star.tex
 LaTeX2e <2020-02-02> patch level 5
-L3 programming layer <2020-04-06> (egpubl-eurovis-star.cls
+L3 programming layer <2020-04-06>
+(D:/Documents/FRI/NRG/BridgeReconstruction/report\egpubl-eurovis-star.cls
 Document Class: egpubl-eurovis-star 2013/07/17 Document Style for EG Publicatio
 ns v3.56
 \c@table=\count167
@@ -28,7 +32,8 @@ Package: iftex 2020/03/06 v1.0d TeX engine tests
 )) (EGauthorGuidelines-eurovis14-star.lbl)
 \openout9 = `EGauthorGuidelines-eurovis14-star.lbl'.
 
-) (eurovis2014-star.sty)
+)
+(D:/Documents/FRI/NRG/BridgeReconstruction/report\eurovis2014-star.sty)
 ("C:\Users\Tim\AppData\Local\Programs\MiKTeX 2.9\tex/latex/graphics\graphicx.st
 y"
 Package: graphicx 2019/11/30 v1.2a Enhanced LaTeX Graphics (DPC,SPQR)
@@ -200,7 +205,7 @@ File: hpdftex.def 2020/01/14 v7.00d Hyperref driver for pdfTeX
 ) ("C:\Users\Tim\AppData\Local\Programs\MiKTeX 2.9\tex/latex/base\t1enc.sty"
 Package: t1enc 1994/06/01 Standard LaTeX package
 )
-(dfadobe.sty
+(D:/Documents/FRI/NRG/BridgeReconstruction/report\dfadobe.sty
 Package: dfadobe 2000/03/05 v1.4 T1-encoded Times (except symbols), Courier, He
 lvetica (at 90\%) + math package
 LaTeX Font Info:    Redeclaring symbol font `operators' on input line 14.
@@ -230,7 +235,8 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
 (Font)                  OT1/cmr/m/it --> OT1/ptm/m/it on input line 20.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> OT1/ptm/m/it on input line 20.
- (dfT1ptm.fd
+
+(D:/Documents/FRI/NRG/BridgeReconstruction/report\dfT1ptm.fd
 File: dfT1ptm.fd 2000/03/05 DF - Fontinst v1.6 font definitions for T1/ptm.
 
 
@@ -248,7 +254,7 @@ LaTeX Warning: Font shape declaration has incorrect series value `mc'.
                It should not contain an `m'! Please correct it.
                Found on input line 61.
 
-) (dfT1phv.fd
+) (D:/Documents/FRI/NRG/BridgeReconstruction/report\dfT1phv.fd
 File: dfT1phv.fd 1997/12/02 Fontinst v1.6 font definitions for T1/phv scaled to
  90\%.
 
@@ -272,7 +278,7 @@ LaTeX Warning: Font shape declaration has incorrect series value `mc'.
                It should not contain an `m'! Please correct it.
                Found on input line 83.
 
-) (dfT1pcr.fd
+) (D:/Documents/FRI/NRG/BridgeReconstruction/report\dfT1pcr.fd
 File: dfT1pcr.fd 2000/03/05 DF - Fontinst v1.6 font definitions for T1/pcr.
 
 
@@ -290,7 +296,7 @@ LaTeX Warning: Font shape declaration has incorrect series value `mc'.
                It should not contain an `m'! Please correct it.
                Found on input line 60.
 
-)) (egweblnk.sty
+)) (D:/Documents/FRI/NRG/BridgeReconstruction/report\egweblnk.sty
 Package: egweblnk 2004/10/29 v2.2 DF's support for http web links in class egpu
 bl
 )
@@ -401,87 +407,146 @@ LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 8
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 
-LaTeX Warning: Reference `e_geodetski_podatki' on page 1 undefined on input lin
-e 95.
+LaTeX Warning: Citation `e\_geodetski\_podatki' on page 1 undefined on input li
+ne 95.
 
-<terrain_inter.png, id=4, 903.375pt x 536.75531pt>
-File: terrain_inter.png Graphic file (type png)
-<use terrain_inter.png>
-Package pdftex.def Info: terrain_inter.png  used on input line 113.
-(pdftex.def)             Requested size: 216.0pt x 128.34067pt.
-<terrain_br.png, id=6, 903.375pt x 536.0025pt>
-File: terrain_br.png Graphic file (type png)
-<use terrain_br.png>
-Package pdftex.def Info: terrain_br.png  used on input line 114.
-(pdftex.def)             Requested size: 216.0pt x 128.16068pt.
+<bridge.png, id=5, 478.78876pt x 298.11375pt>
+File: bridge.png Graphic file (type png)
+<use bridge.png>
+Package pdftex.def Info: bridge.png  used on input line 130.
+(pdftex.def)             Requested size: 216.0pt x 134.4911pt.
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
-28.
+41.
 ("C:\Users\Tim\AppData\Local\Programs\MiKTeX 2.9\tex/latex/psnfss\ts1ptm.fd"
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
 [1{C:/Users/Tim/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}
 
 
- <./terrain_inter.png> <./terrain_br.png>]
-<bridge.png, id=23, 478.78876pt x 298.11375pt>
-File: bridge.png Graphic file (type png)
-<use bridge.png>
-Package pdftex.def Info: bridge.png  used on input line 131.
-(pdftex.def)             Requested size: 216.0pt x 134.4911pt.
-<side_pre_3.png, id=26, 904.1278pt x 536.75531pt>
+]
+<terrain_inter.png, id=25, 903.375pt x 536.75531pt>
+File: terrain_inter.png Graphic file (type png)
+<use terrain_inter.png>
+Package pdftex.def Info: terrain_inter.png  used on input line 149.
+(pdftex.def)             Requested size: 216.0pt x 128.34067pt.
+<terrain_br.png, id=27, 903.375pt x 536.0025pt>
+File: terrain_br.png Graphic file (type png)
+<use terrain_br.png>
+Package pdftex.def Info: terrain_br.png  used on input line 150.
+(pdftex.def)             Requested size: 216.0pt x 128.16068pt.
+<side_pre_3.png, id=31, 904.1278pt x 536.75531pt>
 File: side_pre_3.png Graphic file (type png)
 <use side_pre_3.png>
-Package pdftex.def Info: side_pre_3.png  used on input line 164.
+Package pdftex.def Info: side_pre_3.png  used on input line 166.
 (pdftex.def)             Requested size: 216.0pt x 128.22601pt.
-<side_br_3.png, id=27, 904.1278pt x 536.75531pt>
+<side_br_3.png, id=32, 904.1278pt x 536.75531pt>
 File: side_br_3.png Graphic file (type png)
 <use side_br_3.png>
-Package pdftex.def Info: side_br_3.png  used on input line 165.
+Package pdftex.def Info: side_br_3.png  used on input line 167.
 (pdftex.def)             Requested size: 216.0pt x 128.22601pt.
-<front_pre.png, id=28, 1001.24063pt x 594.72188pt>
+<front_pre.png, id=33, 1001.24063pt x 594.72188pt>
 File: front_pre.png Graphic file (type png)
 <use front_pre.png>
-Package pdftex.def Info: front_pre.png  used on input line 173.
+Package pdftex.def Info: front_pre.png  used on input line 174.
 (pdftex.def)             Requested size: 216.0pt x 128.2983pt.
-<front_br.png, id=29, 1001.24063pt x 595.47469pt>
+<front_br.png, id=34, 1001.24063pt x 595.47469pt>
 File: front_br.png Graphic file (type png)
 <use front_br.png>
-Package pdftex.def Info: front_br.png  used on input line 174.
+Package pdftex.def Info: front_br.png  used on input line 175.
 (pdftex.def)             Requested size: 216.0pt x 128.4607pt.
- [2 <./bridge.png (PNG copy)> <./side_pre_3.png> <./side_br_3.png>]
-No file EGauthorGuidelines-eurovis14-star.bbl.
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 201.
-[3
 
- <./front_pre.png> <./front_br.png>]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 201.
- (EGauthorGuidelines-eurovis14-star.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 201.
-Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 201.
+
+LaTeX Warning: Citation `d48\_gk' on page 2 undefined on input line 191.
+
+[2 <D:/Documents/FRI/NRG/BridgeReconstruction/report/bridge.png (PNG copy)> <D:
+/Documents/FRI/NRG/BridgeReconstruction/report/terrain_inter.png> <D:/Documents
+/FRI/NRG/BridgeReconstruction/report/terrain_br.png> <D:/Documents/FRI/NRG/Brid
+geReconstruction/report/side_pre_3.png> <D:/Documents/FRI/NRG/BridgeReconstruct
+ion/report/side_br_3.png>] (EGauthorGuidelines-eurovis14-star.bbl
+(EGauthorGuidelines-eurovis14-star.brf
+! Missing \endcsname inserted.
+<to be read again> 
+                   \protect 
+l.1 ..., e\_geodetski\_podatki}{{1}{1}{section.1}}
+                                                  
+? 
+! Extra \endcsname.
+<argument> ...after \ifx \csname br@\x \endcsname 
+                                                  \relax \expandafter \prote...
+l.1 ..., e\_geodetski\_podatki}{{1}{1}{section.1}}
+                                                  
+? 
+! Missing \endcsname inserted.
+<to be read again> 
+                   \protect 
+l.1 ..., e\_geodetski\_podatki}{{1}{1}{section.1}}
+                                                  
+? 
+! Missing \endcsname inserted.
+<to be read again> 
+                   \protect 
+l.2 \backcite {d48\_gk}{{3}{4}{section.4}}
+                                          
+? 
+! Extra \endcsname.
+<argument> ...after \ifx \csname br@\x \endcsname 
+                                                  \relax \expandafter \prote...
+l.2 \backcite {d48\_gk}{{3}{4}{section.4}}
+                                          
+? 
+! Missing \endcsname inserted.
+<to be read again> 
+                   \protect 
+l.2 \backcite {d48\_gk}{{3}{4}{section.4}}
+                                          
+? 
+)
+\tf@brf=\write3
+\openout3 = `EGauthorGuidelines-eurovis14-star.brf'.
+
+
+Underfull \hbox (badness 1178) in paragraph at lines 7--7
+[]\T1/ptm/m/n/8 Shapefile - Wikipedia.  Dosegljivo: [][]$\T1/pcr/m/n/8 https : 
+/ / en .
+ []
+
+)
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 212.
+ [3 <D:/Documents/FRI/NRG/BridgeReconstruction/report/front_pre.png> <D:/Docume
+nts/FRI/NRG/BridgeReconstruction/report/front_br.png>]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 212.
+
+(EGauthorGuidelines-eurovis14-star.aux)
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 212.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 212.
+Package rerunfilecheck Info: File `EGauthorGuidelines-eurovis14-star.brf' has n
+ot changed.
+(rerunfilecheck)             Checksum: 1338E1F2AADCE8D9C49C610279B2D31F;97.
 
 
 LaTeX Warning: There were undefined references.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 201.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 212.
  ) 
 Here is how much of TeX's memory you used:
- 5931 strings out of 480930
- 94164 string characters out of 2900700
- 359492 words of memory out of 3000000
- 21660 multiletter control sequences out of 15000+200000
- 569942 words of font info for 72 fonts, out of 3000000 for 9000
+ 5957 strings out of 480930
+ 95053 string characters out of 2900700
+ 359521 words of memory out of 3000000
+ 21670 multiletter control sequences out of 15000+200000
+ 570563 words of font info for 74 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 47i,11n,37p,320b,317s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 47i,10n,37p,367b,396s stack positions out of 5000i,500n,10000p,200000b,50000s
 {C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/enc/dvips/base/8r.enc}<
 C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/c
-msy9.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/times/
-utmb8a.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/time
-s/utmr8a.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/ti
-mes/utmri8a.pfb>
-Output written on EGauthorGuidelines-eurovis14-star.pdf (3 pages, 284107 bytes)
+msy9.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/courie
+r/ucrr8a.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/ti
+mes/utmb8a.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/urw/
+times/utmr8a.pfb><C:/Users/Tim/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/ur
+w/times/utmri8a.pfb>
+Output written on EGauthorGuidelines-eurovis14-star.pdf (3 pages, 296884 bytes)
 .
 PDF statistics:
- 68 PDF objects out of 1000 (max. 8388607)
- 14 named destinations out of 1000 (max. 500000)
+ 84 PDF objects out of 1000 (max. 8388607)
+ 21 named destinations out of 1000 (max. 500000)
  36 words of extra memory for PDF output out of 10000 (max. 10000000)
 
