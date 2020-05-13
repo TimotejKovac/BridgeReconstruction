@@ -16,15 +16,12 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.geometry.Envelope2D;
-import org.geotools.geometry.jts.JTS;
-import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.*;
 import org.opengis.feature.Feature;
 import org.opengis.feature.GeometryAttribute;
 import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 
 import javax.vecmath.Vector3d;
@@ -55,10 +52,8 @@ public class Main {
     private static HashMap<Long, long[]> dataIds = new HashMap<>();
 
 
-    public static void main(String[] args) throws FactoryException, IOException, TransformException {
+    public static void main(String[] args)  {
 
-
-        // Time needed for Delaunay triangulation of file GK_430_136.laz which contained 12M points was 40 minutes on Intel i7 6700K.
         reader = new LASReader(new File("GK_468_104.laz"));
 
         LASHeader lasHeader = reader.getHeader();
@@ -70,6 +65,7 @@ public class Main {
         terrainTree = RTree.create();
         bridgeTree = RTree.create();
 
+        // This is a bodge. Rather convert all of the shapes into one coordinate system.
         dataIds.put(17530217L, new long[] {469434, 458364});
         dataIds.put(17530216L, new long[] {477696, 458364});
         dataIds.put(17530116L, new long[] {27611, 458366});
@@ -171,17 +167,56 @@ public class Main {
 
             generatedPoints = restoreUnderTheBridge(bridge, rivers);
             // TODO: Get real Z-value for bottom part of bridge.
-            generatedPoints.addAll(restoreBridge(bridge, bridgePoints.get(0).getZ()));
+
+            List<Vector3d> topBridgePoints = getMajorityTop(bridgePoints);
+            RTree topBridge = RTree.create();
+            for(Vector3d topBridgePoint : topBridgePoints) {
+                topBridge = topBridge.add(topBridgePoint, PointDouble.create(topBridgePoint.x, topBridgePoint.y));
+            }
+            generatedPoints.addAll(restoreBridge(bridge, topBridge));
 
             points.addAll(generatedPoints);
             //points.removeAll(bridgePoints);
 
             write(points, count++);
-            //System.exit(0);
+            System.exit(0);
         }
     }
 
-    private static ArrayList<Vector3d> restoreBridge(Bridge bridge, double bridgeZ) {
+    private static List<Vector3d> getMajorityTop(ArrayList<Vector3d> bridgePoints){
+        ArrayList<Vector3d>[] buckets = new ArrayList[10];
+        for(int i = 0; i < buckets.length; i++) {
+            buckets[i] = new ArrayList<>();
+        }
+        double minZ = Double.MAX_VALUE, maxZ = Double.MIN_VALUE;
+        for(Vector3d point : bridgePoints) {
+            if(point.z < minZ) {
+                minZ = point.z;
+            }
+            if(point.z > maxZ) {
+                maxZ = point.z;
+            }
+        }
+        double range = maxZ - minZ;
+        for(Vector3d point : bridgePoints) {
+            buckets[(int)((point.z - minZ) / range * 9)].add(point);
+        }
+
+        int maxItemsIndex = 0;
+        int maxItems = Integer.MIN_VALUE;
+        for(int i = 0; i < buckets.length; i++) {
+            ArrayList<Vector3d> items = buckets[i];
+            if(items.size() > maxItems) {
+                maxItems = items.size();
+                maxItemsIndex = i;
+            }
+        }
+        System.out.println("getMajorityTop: buckets = " + Arrays.toString(buckets));
+
+        return buckets[maxItemsIndex];
+    }
+
+    private static ArrayList<Vector3d> restoreBridge(Bridge bridge, RTree bridgePoints) {
         ArrayList<Vector3d> generatedPoints = new ArrayList<>();
         for(MultiLineString bridgeComponent : bridge.getBridges()) {
             System.out.println("geometries = " + bridgeComponent.getNumGeometries());
@@ -206,7 +241,13 @@ public class Main {
 
                 ArrayList<Vector3d> neighbours = new ArrayList<>();
                 for(Coordinate coordinate : polygon.getCoordinates()) {
-                    neighbours.add(new Vector3d(coordinate.x, coordinate.y, bridgeZ-200));
+                    Iterator<Entry<Vector3d, Geometry>> iterator = bridgePoints.nearest(Geometries.point(coordinate.x, coordinate.y), Double.MAX_VALUE, 5).iterator();
+                    ArrayList<Vector3d> result = new ArrayList<>();
+                    while(iterator.hasNext()) {
+                        result.add(iterator.next().value());
+                    }
+                    neighbours.add(new Vector3d(coordinate.x, coordinate.y,
+                            interpolateZ(new Vector3d(coordinate.x, coordinate.y, 0), -1, result)));
                 }
 
                 System.out.println("bridge length = " + bridgeLength);
@@ -489,7 +530,6 @@ public class Main {
 
         comparators.addAll(neighbours);
 
-        boolean failsafe = false;
         if (comparators.size() == 0) {
 
             //System.err.println("ERROR NO FOUND!");
@@ -497,7 +537,6 @@ public class Main {
             for(Entry<Vector3d, Geometry> entry : entries) {
                 comparators.add(entry.value());
             }
-            failsafe = true;
         }
 
 
@@ -521,12 +560,6 @@ public class Main {
             }
         });
 
-       // System.out.println(Arrays.toString(comparators.toArray()));
-        /*if (comparators.si) {
-            comparators = comparators.subList(0, 10);
-        }*/
-
-        //System.out.println("size = " + entries.size());
         for (Vector3d entry : comparators) {
             double distance = distance(entry, bridgePoint);
             if(distance == 0)
@@ -537,11 +570,8 @@ public class Main {
             values += newWeight * entry.z;
             weightsSum += newWeight;
         }
-        //System.out.println("values = " + values);
-        //System.out.println("weightsum = " + weightsSum);
 
         double z =  values / weightsSum;
-        //System.out.println("Z = " + z);
         return z;
     }
 
