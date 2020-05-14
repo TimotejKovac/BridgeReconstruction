@@ -34,9 +34,9 @@ import static com.company.Main.TYPE.*;
 
 public class Main {
 
-    private static final String INFRASTRUCTURE_FILE = "../GJI_SLO_SHP_G_1100_D48/GJI_SLO_1100_ILL_D48_20200508.shp";
-    private static final String ROADS_FILE = "../DTM_TN_D48/TN_CESTE_L.shp";
-    private static final String WATERS_FILE = "../DTM_HY_D48/HY_TEKOCE_VODE_L.shp";
+    private static final String INFRASTRUCTURE_FILE = "data/GJI_SLO_SHP_G_1100_D48/GJI_SLO_1100_ILL_D48_20200508.shp";
+    private static final String ROADS_FILE = "data/DTM_TN_D48/TN_CESTE_L.shp";
+    private static final String WATERS_FILE = "data/DTM_HY_D48/HY_TEKOCE_VODE_L.shp";
 
     private static LASReader reader;
 
